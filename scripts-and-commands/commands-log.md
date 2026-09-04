@@ -1024,3 +1024,57 @@ get without burning a version number. `autoPublish` stays false in the pom, so e
 a real deploy lands as a validated but unpublished bundle.
 
 Java gate green after all of it: 132 tests, 240 byte identical comparisons.
+
+## 2026-09-04, session 12 continued, the npm packages are published
+
+All three are live at 0.1.0 under Apache-2.0, published by hand from a terminal.
+Nothing in this repository holds an npm token and nothing in CI publishes: the
+`packaging` job packs tarballs to prove the guard works and that no `workspace:`
+specifier leaks, and stops there.
+
+```bash
+npm view @ibhatech/csvdiff-core  version dist-tags.latest license dependencies
+npm view @ibhatech/csvdiff-view  version dist-tags.latest license dependencies
+npm view @ibhatech/csvdiff-react version dist-tags.latest license dependencies
+```
+
+```
+core   0.1.0  Apache-2.0  {}
+view   0.1.0  Apache-2.0  { core: ^0.1.0 }
+react  0.1.0  Apache-2.0  { core: ^0.1.0, view: ^0.1.0 }
+```
+
+The publish arrived in two parts: `core` first, then `view` and `react` after a
+gap, which is why an intermediate check found the latter two returning 404.
+
+### Verified from the registry rather than from the workspace
+
+This is F5, and it exercises paths a workspace install never touches.
+
+```bash
+npm install @ibhatech/csvdiff-react      # in an empty project, nothing else named
+npx vite build
+```
+
+Installing **only** react pulled view and core transitively through the caret
+ranges and deduped them, which is the `workspace:^` decision paying off exactly as
+intended: had it stayed `workspace:*`, those would be exact pins and a core patch
+release would be invisible to every react consumer.
+
+The Vite build succeeded against the published packages and emitted both wasm
+modules as hashed assets, 121 KB and 139 KB, plus the stylesheet and the worker
+chunk. All three packages carry `LICENSE` and `NOTICE`; core ships `wasm/`, view
+ships `styles/`.
+
+Two fixes were confirmed present in **what was actually published**, rather than
+only in the working tree: the caret, which came out as `^0.1.0` rather than an
+exact `0.1.0`, and the `workerClient` change, which is why a consumer build no
+longer warns about a `worker.ts` that no published package contains. That warning
+count is now zero against the registry copy.
+
+A plain Node consumer was checked the same way, installing core alone from the
+registry and running a real diff: 1 changed cell, with `10.50` against `10.5` under
+`DECIMAL` correctly not counted, and the normalization-equal row still reported
+because it carries a suppressed cell.
+
+**0.1.0 is permanent for all three now.** Any correction is 0.1.1.

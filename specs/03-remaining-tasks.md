@@ -339,6 +339,32 @@ section 7 explains what each deferred item needs.
 
 ## F. Publishing the npm packages
 
+**PUBLISHED 2026-09-04. All three are live at 0.1.0 under Apache-2.0.**
+
+```
+@ibhatech/csvdiff-core    0.1.0   dependencies: {}
+@ibhatech/csvdiff-view    0.1.0   @ibhatech/csvdiff-core: ^0.1.0
+@ibhatech/csvdiff-react   0.1.0   @ibhatech/csvdiff-core: ^0.1.0, @ibhatech/csvdiff-view: ^0.1.0
+```
+
+Published by hand from a terminal rather than by CI, which is the right way round
+for a first release: nothing in this repository holds an npm token, and the OTP
+prompt is the last chance to notice something wrong before a permanent action.
+
+**Verified from the registry, not from the workspace**, which is the whole point of
+F5: installing only `@ibhatech/csvdiff-react` in an empty project pulled `view` and
+`core` transitively through the caret ranges and deduped them, a Vite build against
+those three succeeded, and both wasm modules were emitted as hashed assets. All
+three carry `LICENSE` and `NOTICE`; `core` ships `wasm/` and `view` ships `styles/`.
+
+Two things this confirmed had made it into what was actually published, rather than
+only into the working tree: the `workspace:^` caret, which resolved to `^0.1.0`
+rather than an exact pin, and the `workerClient` fix, which is why a consumer build
+no longer warns about a missing `worker.ts`.
+
+**0.1.0 is now permanent for all three.** Any correction is 0.1.1.
+
+
 Three packages publish, in dependency order: `@ibhatech/csvdiff-core`, then
 `@ibhatech/csvdiff-view`, then `@ibhatech/csvdiff-react`. All are at `0.1.0`.
 `@ibhatech/csvdiff-monorepo` is `"private": true` and must stay that way.
@@ -401,7 +427,7 @@ Three packages publish, in dependency order: `@ibhatech/csvdiff-core`, then
 - [ ] **F4.3.** `npm login`, with 2FA enabled on the account. For CI, use a
       granular access token scoped to these three packages rather than a classic
       automation token.
-- [ ] **F4.4.** Publish in dependency order: `core`, then `view`, then `react`.
+- [x] **F4.4. Done 2026-09-04.** Published in dependency order: `core`, then `view`, then `react`.
       Each waits for the previous to be resolvable on the registry, which is not
       instant.
 - [ ] **F4.5.** Consider `--provenance` if publishing from GitHub Actions. It
@@ -411,12 +437,12 @@ Three packages publish, in dependency order: `@ibhatech/csvdiff-core`, then
 
 ### F5. After publishing
 
-- [ ] **F5.1.** In a scratch directory outside this repo, `npm install
+- [x] **F5.1. Done.** In a scratch directory outside this repo, `npm install
       @ibhatech/csvdiff-react` and diff two files. A consumer installing from the
       registry exercises paths that a workspace install never touches, notably
       how the wasm file is located at runtime.
 - [ ] **F5.2.** Check the rendered README on npmjs.com for each package.
-- [ ] **F5.3.** Verify the packages work under a bundler (Vite) and under plain
+- [x] **F5.3. Done.** Verify the packages work under a bundler (Vite) and under plain
       Node, since `core` ships both a main entry and a `./worker` entry.
 
 ### F6. If these are meant to be private instead
