@@ -123,7 +123,7 @@ jobs:
           done
           ls -l "$RUNNER_TEMP"/*.tgz
 
-      - name: The packed manifests must not carry workspace: specifiers
+      - name: "The packed manifests must not carry a workspace: specifier"
         shell: bash
         run: |
           set -euo pipefail
