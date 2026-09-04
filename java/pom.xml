@@ -308,6 +308,25 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-gpg-plugin</artifactId>
             <version>3.2.7</version>
+            <configuration>
+              <!--
+                Take the passphrase from MAVEN_GPG_PASSPHRASE and prompt on the
+                terminal rather than through a pinentry program.
+
+                Without this, signing fails with "gpg: signing failed: No pinentry"
+                anywhere gpg-agent cannot open a pinentry dialog, which is every CI
+                runner and every headless or WSL shell. Loopback is the mode both of
+                those actually want; a desktop with a working pinentry is the
+                special case, not the norm.
+
+                It needs `allow-loopback-pinentry` in ~/.gnupg/gpg-agent.conf,
+                which is a one line local setup, not something a build can do.
+              -->
+              <gpgArguments>
+                <arg>--pinentry-mode</arg>
+                <arg>loopback</arg>
+              </gpgArguments>
+            </configuration>
             <executions>
               <execution>
                 <id>sign-artifacts</id>

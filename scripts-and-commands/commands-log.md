@@ -1078,3 +1078,52 @@ registry and running a real diff: 1 changed cell, with `10.50` against `10.5` un
 because it carries a suppressed cell.
 
 **0.1.0 is permanent for all three now.** Any correction is 0.1.1.
+
+## 2026-09-04, session 12 continued, the signing key
+
+The `com.ibhatech` namespace is verified on central.sonatype.com by DNS TXT. The
+GPG key is the other half of J2, and the direction matters: **Central never
+generates, holds or sees a signing key.** The key is generated locally, the public
+half goes to a public keyserver, and Central fetches it from there to verify the
+signatures Maven produced. The Central user token is the credential that goes the
+other way, generated on the Portal.
+
+Key generation was not run through the assistant, deliberately: it prompts for a
+passphrase, and a passphrase typed through a tool call lands in a transcript.
+
+### The pinentry problem, and why the fix belongs in the pom
+
+`gpg --full-generate-key` failed with `agent_genkey failed: No pinentry`. There is
+no pinentry binary anywhere on this machine, which is normal for WSL and for any
+headless shell. Two ways out: install one with `sudo dnf install pinentry`, or use
+loopback pinentry, where gpg prompts on the terminal itself.
+
+```bash
+mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
+echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+gpgconf --kill gpg-agent
+gpg --pinentry-mode loopback --full-generate-key
+```
+
+Loopback is the better answer here, and not only because it avoids a package
+install. **Maven would have hit exactly the same failure at signing time**, on this
+machine and on every CI runner, since neither has a pinentry dialog to open. So
+`maven-gpg-plugin` now passes `--pinentry-mode loopback` in the release profile.
+A desktop with a working pinentry is the special case; headless is the norm for
+this build.
+
+### `scripts-and-commands/check_signing_key.py`
+
+Verifies the key before a release depends on it, and **never touches the
+passphrase**: everything it reads is public. It checks that a secret key exists,
+that it can sign, its algorithm and length, whether it has expired or is about to,
+whether a uid carries the pom's developer address, and whether the public half is
+actually retrievable from `keyserver.ubuntu.com`.
+
+That last one is the failure worth catching early. A key that exists locally but
+was never sent, or was sent minutes ago and has not propagated, fails a Central
+deploy at signature verification and for no other reason, which is a confusing
+place to learn it.
+
+Run against the current keyless state it reports the missing key and the command
+to create one, which is the state until the key is generated.
