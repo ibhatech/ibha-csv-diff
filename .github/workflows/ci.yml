@@ -37,7 +37,7 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install the toolchain the gate needs
         run: |
@@ -48,17 +48,21 @@ jobs:
           clang --version
           wasm-ld --version || ld.lld --version
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "20" # the floor the packages claim to support
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
-          # Left unpinned on purpose: js/package.json carries a packageManager
-          # field, and stating a second version here is how the two drift.
+          # The version is NOT stated here on purpose: js/package.json carries a
+          # packageManager field and a second copy is how the two drift. But this
+          # action reads that file relative to the REPOSITORY ROOT, and there is no
+          # package.json there, so it has to be pointed at the workspace one. Left
+          # to its default it fails with "No pnpm version is specified".
+          package_json_file: js/package.json
           run_install: false
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "21"
@@ -80,20 +84,23 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "21"
           cache: maven
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "20"
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
+          # Read the packageManager pin from the workspace manifest, not the
+          # repository root, which has no package.json.
+          package_json_file: js/package.json
           run_install: false
 
       - name: The javadoc jar builds, with doclint and no warnings

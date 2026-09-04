@@ -39,9 +39,9 @@ jobs:
             tag: darwin-aarch64
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "21" # the release the pom targets
@@ -67,7 +67,7 @@ jobs:
         working-directory: java
         run: mvn -B -DskipNative=true test
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: native-${{ matrix.tag }}
           path: java/target/native/${{ matrix.tag }}/
