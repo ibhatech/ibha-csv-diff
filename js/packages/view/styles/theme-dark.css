@@ -1,0 +1,22 @@
+/* @ibhatech/csvdiff-view: dark theme. Variables only; import the base
+   stylesheet for structure. Generated from stylesheet.ts. */
+:root {
+  --ibha-csvd-border-color: #3a3f45;
+  --ibha-csvd-header-bg: #1d2125;
+  --ibha-csvd-body-bg: #15181b;
+  --ibha-csvd-body-fg: #e6e6e6;
+  --ibha-csvd-added-bg: #12301a;
+  --ibha-csvd-added-fg: #8ddc9c;
+  --ibha-csvd-deleted-bg: #3a1618;
+  --ibha-csvd-deleted-fg: #f2a2a2;
+  --ibha-csvd-modified-bg: #33290d;
+  --ibha-csvd-modified-fg: #e8c96a;
+  --ibha-csvd-moved-bg: #1b2533;
+  --ibha-csvd-finding-bg: #3a1618;
+  --ibha-csvd-finding-fg: #f2a2a2;
+  --ibha-csvd-suppressed-fg: #9aa0a6;
+  --ibha-csvd-old-value-fg: #9aa0a6;
+  --ibha-csvd-seg-added-bg: #2c6b3a;
+  --ibha-csvd-seg-removed-bg: #7a2f33;
+  --ibha-csvd-focus-outline: 2px solid #82b1ff;
+}

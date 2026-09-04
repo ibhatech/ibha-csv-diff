@@ -1,0 +1,57 @@
+{
+  "name": "@ibhatech/csvdiff-core",
+  "version": "0.1.0",
+  "description": "CSV diff engine. WebAssembly core with a zero copy streaming ingest path.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./worker": {
+      "types": "./dist/worker.d.ts",
+      "import": "./dist/worker.js"
+    },
+    "./wasm/*": "./wasm/*"
+  },
+  "files": [
+    "dist",
+    "wasm",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "test": "node --test \"src/*.test.ts\"",
+    "prepack": "node ../../scripts/check-wasm.mjs"
+  },
+  "dependencies": {},
+  "author": "Manas Marthi <manas@ibhatech.com>",
+  "homepage": "https://github.com/ibhatech/ibha-csv-diff#readme",
+  "bugs": {
+    "url": "https://github.com/ibhatech/ibha-csv-diff/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibhatech/ibha-csv-diff.git",
+    "directory": "js/packages/core"
+  },
+  "keywords": [
+    "csv",
+    "diff",
+    "reconciliation",
+    "wasm",
+    "webassembly",
+    "streaming",
+    "table"
+  ]
+}

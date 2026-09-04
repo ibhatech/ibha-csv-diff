@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    // Relative imports name the .ts file they actually resolve to, and tsc
+    // rewrites them to .js on emit. This is not a style preference: Node 22 and
+    // later execute TypeScript directly by stripping types, but only resolves
+    // the specifier as written, so `./source.js` fails while `./source.ts` runs.
+    // With this on, every gate script drives the real binding sources under bare
+    // node with no dependency installed at all, which is what keeps the JS gate
+    // as self contained as the C one.
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true
+  }
+}

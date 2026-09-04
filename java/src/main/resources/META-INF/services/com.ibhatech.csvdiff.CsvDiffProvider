@@ -1,0 +1,3 @@
+# The backend shipped in this jar. An FFM backend for JDK 22+ would register
+# itself the same way from its own artifact and win by priority.
+com.ibhatech.csvdiff.jni.JniProvider

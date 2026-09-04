@@ -1,0 +1,5 @@
+# Agent instruction files. They describe how this repository is worked on with an
+# AI assistant, including local machine details, and they mean nothing to anyone
+# consuming the library. They stay on disk and keep working; they do not ship.
+AGENTS.md
+CLAUDE.md

@@ -1,0 +1,57 @@
+{
+  "name": "@ibhatech/csvdiff-react",
+  "version": "0.1.0",
+  "description": "React components for rendering CSV diffs. Unstyled semantic markup; you supply the stylesheet.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ibhatech/csvdiff-core": "workspace:^",
+    "@ibhatech/csvdiff-view": "workspace:^"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "author": "Manas Marthi <manas@ibhatech.com>",
+  "homepage": "https://github.com/ibhatech/ibha-csv-diff#readme",
+  "bugs": {
+    "url": "https://github.com/ibhatech/ibha-csv-diff/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibhatech/ibha-csv-diff.git",
+    "directory": "js/packages/react"
+  },
+  "keywords": [
+    "csv",
+    "diff",
+    "reconciliation",
+    "wasm",
+    "webassembly",
+    "streaming",
+    "table"
+  ]
+}

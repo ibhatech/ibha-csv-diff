@@ -1,0 +1,6 @@
+target/
+*.class
+*.jar
+# The host platform's JNI library is built into target/ and copied into the jar at
+# package time. A release collects the other platforms from their CI runners.
+src/main/resources/native/

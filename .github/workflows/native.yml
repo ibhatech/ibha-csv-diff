@@ -1,0 +1,75 @@
+# The native libraries the published jar bundles.
+#
+# Phase J3 of docs/PUBLISHING-PLAN.md. Two targets, per decision 0.3: the two
+# platforms Manas runs and can therefore test on real hardware. The loader is not
+# limited to them, so adding linux-aarch64, darwin-x86_64 or windows-x86_64 later
+# is one more matrix entry plus a line in NativeLibrary.BUNDLED, and no code change.
+#
+# Each job builds only its own library and uploads it. The collect step in
+# release.yml downloads all of them into java/target/native/ before `mvn package`,
+# which is exactly the tree the pom's resource block already expects and the layout
+# NativeLibrary already looks in.
+#
+# Every job runs the Java suite after building, because a .dylib that loads and
+# then disagrees about a diff is worse than one that fails to load. A build that is
+# only linked and never run is not evidence of anything.
+
+name: native
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call: # so release.yml can reuse this exact matrix
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.tag }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false # one platform failing should not hide the other's result
+      matrix:
+        include:
+          - os: ubuntu-latest
+            tag: linux-x86_64
+          - os: macos-14 # Apple silicon
+            tag: darwin-aarch64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21" # the release the pom targets
+
+      - name: Build the JNI library
+        run: python3 scripts-and-commands/build_jni.py
+
+      - name: Check it landed under the expected tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "java/target/native/${{ matrix.tag }}" || {
+            echo "expected java/target/native/${{ matrix.tag }}, found:"
+            ls -R java/target/native || true
+            exit 1
+          }
+          ls -l "java/target/native/${{ matrix.tag }}"
+
+      - name: Generate the fixtures the tests read
+        run: python3 core/fixtures/gen_fixtures.py
+
+      - name: Run the Java suite against it
+        working-directory: java
+        run: mvn -B -DskipNative=true test
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.tag }}
+          path: java/target/native/${{ matrix.tag }}/
+          if-no-files-found: error
+          retention-days: 7

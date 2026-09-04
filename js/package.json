@@ -1,0 +1,25 @@
+{
+  "name": "@ibhatech/csvdiff-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "CSV diff engine and view components for the browser and Node",
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "wasm": "make -C ../core wasm && node scripts/copy-wasm.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "jsdom": "^30.0.1",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

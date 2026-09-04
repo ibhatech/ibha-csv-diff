@@ -1,0 +1,59 @@
+{
+  "name": "@ibhatech/csvdiff-view",
+  "version": "0.1.0",
+  "description": "Headless view model for CSV diffs: virtualization, filtering, column widths. No DOM.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./testkit": {
+      "types": "./dist/testkit.d.ts",
+      "import": "./dist/testkit.js"
+    },
+    "./styles.css": "./styles/ibha-csvdiff.css",
+    "./styles/*": "./styles/*"
+  },
+  "files": [
+    "dist",
+    "styles",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ibhatech/csvdiff-core": "workspace:^"
+  },
+  "author": "Manas Marthi <manas@ibhatech.com>",
+  "homepage": "https://github.com/ibhatech/ibha-csv-diff#readme",
+  "bugs": {
+    "url": "https://github.com/ibhatech/ibha-csv-diff/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibhatech/ibha-csv-diff.git",
+    "directory": "js/packages/view"
+  },
+  "keywords": [
+    "csv",
+    "diff",
+    "reconciliation",
+    "wasm",
+    "webassembly",
+    "streaming",
+    "table"
+  ]
+}

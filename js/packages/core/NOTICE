@@ -1,0 +1,43 @@
+ibha-csvdiff
+Copyright 2026 Manas Marthi
+
+This product includes software developed at ibhatech (https://ibhatech.com).
+
+Licensed under the Apache License, Version 2.0. See the LICENSE file at the root
+of this distribution, or https://www.apache.org/licenses/LICENSE-2.0.
+
+--------------------------------------------------------------------------------
+
+Third party code
+
+The C engine, the JavaScript packages and the Java binding are original work and
+carry no third party runtime dependencies. Nothing else is vendored into the
+published artifacts beyond the engine itself:
+
+  - the Java artifact bundles the compiled C engine as a native library per
+    platform, built from the sources in core/ in this same repository
+  - the npm packages bundle the same engine compiled to two WebAssembly modules,
+    scalar and SIMD, built from those same sources
+
+Build and test tooling (Maven, JUnit, Node, pnpm, TypeScript, Vite, Vitest, clang,
+LLVM) is not redistributed and is not part of any published artifact.
+
+--------------------------------------------------------------------------------
+
+xxHash
+
+core/src/hash.c is an independent implementation of the one shot, unseeded,
+default secret subset of the XXH3 64 bit algorithm. It embeds XXH3's 192 byte
+default secret constant, which is reproduced from the reference implementation
+because bit exact agreement with stock xxHash is a functional requirement: the
+digest protocol has a server side computing row hashes, and a hash that were
+merely "close" would silently produce wrong diffs rather than failing.
+
+core/tests/xxh3_vectors.h holds expected hash values produced by running the
+reference implementation's xxhsum, which the C tests then reproduce.
+
+  xxHash - Extremely Fast Hash algorithm
+  Copyright (C) 2012-present, Yann Collet
+  BSD 2-Clause License: https://github.com/Cyan4973/xxHash/blob/dev/LICENSE
+
+No xxHash source code is copied into this project beyond that constant.

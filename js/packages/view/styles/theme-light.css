@@ -1,0 +1,28 @@
+/* @ibhatech/csvdiff-view: light theme. Variables only; import the base
+   stylesheet for structure. Generated from stylesheet.ts. */
+:root {
+  --ibha-csvd-font-family: system-ui, sans-serif;
+  --ibha-csvd-font-size: 13px;
+  --ibha-csvd-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ibha-csvd-row-height: 28px;
+  --ibha-csvd-cell-padding-x: 8px;
+  --ibha-csvd-border-color: #e2e2e2;
+  --ibha-csvd-header-bg: #fafafa;
+  --ibha-csvd-body-bg: #ffffff;
+  --ibha-csvd-body-fg: #1a1a1a;
+  --ibha-csvd-added-bg: #e8f5e9;
+  --ibha-csvd-added-fg: #1b5e20;
+  --ibha-csvd-deleted-bg: #ffebee;
+  --ibha-csvd-deleted-fg: #b71c1c;
+  --ibha-csvd-modified-bg: #fff8e1;
+  --ibha-csvd-modified-fg: #6d4c00;
+  --ibha-csvd-moved-bg: #eef3fb;
+  --ibha-csvd-finding-bg: #fdeaea;
+  --ibha-csvd-finding-fg: #8c1c1c;
+  --ibha-csvd-suppressed-fg: #7a7a7a;
+  --ibha-csvd-old-value-fg: #8a8a8a;
+  --ibha-csvd-old-value-decoration: line-through;
+  --ibha-csvd-seg-added-bg: #a5d6a7;
+  --ibha-csvd-seg-removed-bg: #ef9a9a;
+  --ibha-csvd-focus-outline: 2px solid #1976d2;
+}

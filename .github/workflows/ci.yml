@@ -1,0 +1,141 @@
+# The gate, on every push.
+#
+# Until now this project had no CI at all: everything ran from
+# scripts-and-commands/run_phase6_checks.py on one machine. That script is still
+# the single description of what "green" means, and this workflow runs it rather
+# than restating any part of it, so the two cannot drift.
+#
+# --require-java is the flag that matters here. Without it the script SKIPS the
+# Java half when Maven is missing and still reports success, which is the right
+# behaviour for a developer without a JDK and exactly the wrong behaviour for CI.
+#
+# The determinism check inside it is the reason this workflow exists: it compares
+# the native CLI, both wasm builds and the compiled Java classes byte for byte over
+# the fixture and emitter matrix. It is the evidence behind the promise that a
+# server side reconciliation and a browser preview produce the same report, and it
+# needs all four producers in one process, which is also why this is one repository.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  # A newer push supersedes an in flight run on the same ref. The full gate is not
+  # cheap: valgrind and seven fuzz targets at 200,000 inputs each.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the toolchain the gate needs
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          # valgrind and the sanitizers are part of the C gate, not extras.
+          sudo apt-get install -y --no-install-recommends valgrind clang lld
+          clang --version
+          wasm-ld --version || ld.lld --version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20" # the floor the packages claim to support
+
+      - uses: pnpm/action-setup@v4
+        with:
+          # Left unpinned on purpose: js/package.json carries a packageManager
+          # field, and stating a second version here is how the two drift.
+          run_install: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Install the JS dependencies
+        working-directory: js
+        run: pnpm install --frozen-lockfile
+
+      - name: Run the whole gate
+        run: python3 scripts-and-commands/run_phase6_checks.py --require-java
+
+  # The published artifacts have their own failure modes, and neither is covered by
+  # the gate: a javadoc that will not build is rejected by Maven Central, and an npm
+  # tarball missing its engine installs cleanly and throws at the consumer's first
+  # compare. Both are cheap to check and both have already happened once.
+  packaging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: The javadoc jar builds, with doclint and no warnings
+        working-directory: java
+        run: mvn -B -DskipTests -DskipNative=true javadoc:jar
+
+      - name: The sources and main jars build
+        working-directory: java
+        run: mvn -B -DskipTests -DskipNative=true package
+
+      - name: Build the wasm modules, then the packages
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang lld
+          cd js
+          pnpm install --frozen-lockfile
+          pnpm wasm
+          pnpm -r build
+
+      - name: Pack all three, which runs the wasm guard
+        working-directory: js
+        run: |
+          set -euo pipefail
+          for p in core view react; do
+            (cd "packages/$p" && pnpm pack --pack-destination "$RUNNER_TEMP")
+          done
+          ls -l "$RUNNER_TEMP"/*.tgz
+
+      - name: The packed manifests must not carry workspace: specifiers
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in "$RUNNER_TEMP"/*.tgz; do
+            deps=$(tar xzOf "$f" package/package.json | python3 -c \
+              'import json,sys; print(json.dumps(json.load(sys.stdin).get("dependencies",{})))')
+            echo "$(basename "$f"): $deps"
+            case "$deps" in
+              *workspace:*)
+                echo "ERROR: a workspace: specifier survived into the tarball."
+                echo "The registry cannot resolve it. Use pnpm publish, never npm publish."
+                exit 1
+                ;;
+            esac
+          done

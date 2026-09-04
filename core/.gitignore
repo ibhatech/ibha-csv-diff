@@ -1,0 +1,10 @@
+build/
+fixtures/generated/
+corpus/
+*.o
+*.a
+*.wasm
+*.dSYM/
+crash-*
+leak-*
+timeout-*

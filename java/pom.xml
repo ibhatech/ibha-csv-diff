@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ibha-csvdiff-java
+
+  Java 21 bytecode, per the locked decision in spec 13.6, built by whatever JDK is
+  installed via <release>21</release> rather than by a pinned toolchain. The
+  distinction matters: release 21 compiles against the JDK 21 API signatures, so a
+  class file produced here cannot accidentally reference something newer, which is
+  the guarantee the spec actually wants. It does not require JDK 21 to be present.
+
+  Why this binding is JNI rather than the Foreign Function and Memory API: on
+  JDK 21 the FFM API is a preview feature (JEP 442) and was not finalized until
+  JEP 454 in JDK 22. Using it would force every consuming application to enable
+  preview features and to pin an unstable API, which is not something a library can
+  reasonably demand. The public API is an interface with a runtime selected
+  provider, so an FFM backend can be added for JDK 22+ later without any change
+  visible to consumers.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.ibhatech</groupId>
+  <artifactId>ibha-csvdiff-java</artifactId>
+  <version>0.1.0</version>
+  <packaging>jar</packaging>
+
+  <name>ibha-csvdiff-java</name>
+  <description>
+    Java binding for the ibha-csvdiff engine. Diffs CSV files and JDBC result sets
+    against each other. One binding over the C ABI, not a second implementation of
+    it: the parser, the matcher, the comparators and the emitters live in the C
+    core.
+  </description>
+
+  <url>https://github.com/ibhatech/ibha-csv-diff</url>
+  <inceptionYear>2026</inceptionYear>
+
+  <organization>
+    <name>ibhatech</name>
+    <url>https://ibhatech.com</url>
+  </organization>
+
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <name>Manas Marthi</name>
+      <email>manas@ibhatech.com</email>
+      <organization>ibhatech</organization>
+      <organizationUrl>https://ibhatech.com</organizationUrl>
+    </developer>
+  </developers>
+
+  <!--
+    The four blocks above plus scm are what Maven Central's validation requires;
+    an upload without them is rejected rather than warned about. The repository is
+    a monorepo carrying the C engine, the JavaScript packages and this binding, so
+    the scm URL points at the whole of it rather than at a java/ subtree.
+  -->
+  <scm>
+    <connection>scm:git:https://github.com/ibhatech/ibha-csv-diff.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/ibhatech/ibha-csv-diff.git</developerConnection>
+    <url>https://github.com/ibhatech/ibha-csv-diff</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>https://github.com/ibhatech/ibha-csv-diff/issues</url>
+  </issueManagement>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>21</maven.compiler.release>
+    <junit.version>5.13.4</junit.version>
+
+    <!-- Where the JNI library is built to and loaded from during the build. The
+         published jar carries one per platform under native/<os>-<arch>/ and
+         extracts it on first use; during a local build it comes from here. -->
+    <ibha.native.dir>${project.build.directory}/native</ibha.native.dir>
+
+    <!-- -DskipNative=true builds the Java half alone, which is what an IDE and a
+         javadoc-only run want. The tests then fail to load the engine rather than
+         quietly passing, because a binding that cannot reach its engine has
+         nothing to assert. -->
+    <skipNative>false</skipNative>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <version>1.13.4</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <!-- The host platform's JNI library, bundled where NativeLibrary looks for
+           it. A release build collects the other four from their CI runners into
+           the same tree before packaging. -->
+      <resource>
+        <directory>${ibha.native.dir}</directory>
+        <targetPath>native</targetPath>
+      </resource>
+      <!-- The Apache-2.0 text and the attribution notice travel inside the jar,
+           under META-INF, which is where a consumer's licence audit looks for
+           them. They live at the repository root because the npm packages need
+           the same two files. -->
+      <resource>
+        <directory>${project.basedir}/..</directory>
+        <targetPath>META-INF</targetPath>
+        <includes>
+          <include>LICENSE</include>
+          <include>NOTICE</include>
+        </includes>
+      </resource>
+    </resources>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.14.1</version>
+        <configuration>
+          <compilerArgs>
+            <arg>-Xlint:all</arg>
+            <arg>-Werror</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+
+      <!--
+        Compiles the core C sources and the JNI glue into one shared library for
+        the host platform. Cross platform artifacts are produced in CI, one runner
+        per target, and collected into the published jar.
+
+        The script is the single place the native build is described, so the
+        Phase 6 check script and Maven compile it identically rather than each
+        having its own flags.
+      -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions>
+          <execution>
+            <id>build-jni</id>
+            <phase>generate-resources</phase>
+            <goals><goal>exec</goal></goals>
+            <configuration>
+              <skip>${skipNative}</skip>
+              <executable>python3</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>${project.basedir}/../scripts-and-commands/build_jni.py</argument>
+                <argument>--out</argument>
+                <argument>${ibha.native.dir}</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.2</version>
+        <configuration>
+          <systemPropertyVariables>
+            <ibha.csvdiff.nativeLibPath>${ibha.native.dir}</ibha.csvdiff.nativeLibPath>
+            <ibha.csvdiff.fixtures>${project.basedir}/../core/fixtures/generated</ibha.csvdiff.fixtures>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.4.2</version>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <!-- A stable module name for consumers on the module path. The jar
+                   itself is not modular: JNI plus extracted resources is a poor
+                   first thing to learn JPMS on, and an automatic module costs
+                   consumers nothing. -->
+              <Automatic-Module-Name>com.ibhatech.csvdiff</Automatic-Module-Name>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.3.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals><goal>jar-no-fork</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.11.2</version>
+        <!--
+          The javadoc IS the reference documentation for this artifact, and Maven
+          Central rejects a javadoc jar that failed to build, so this is gated
+          rather than advisory. It regressed once already, silently, because a
+          stale jar sat in target/ and looked like evidence that it still built.
+
+          doclint all + failOnWarnings means a missing @param or a skipped heading
+          level fails the build. -Xmaxwarns lifts javadoc's default cap of 100
+          reported warnings, which is not a count but a ceiling: with the default,
+          "100 warnings" is what you see whether there are 100 or 1000, and the
+          hard error can be pushed off the end of the output entirely.
+        -->
+        <configuration>
+          <doclint>all</doclint>
+          <failOnWarnings>true</failOnWarnings>
+          <additionalOptions>
+            <additionalOption>-Xmaxwarns</additionalOption>
+            <additionalOption>10000</additionalOption>
+          </additionalOptions>
+        </configuration>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals><goal>jar</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!--
+      JDK 24 raised loading a native library to a restricted operation and warns
+      about it; a later release will refuse it outright. The flag does not exist on
+      JDK 21, which this artifact targets, so it is applied by a profile keyed on
+      the JDK actually running the build rather than added unconditionally.
+
+      Consumers on JDK 24 or newer need the same flag, or the equivalent
+      Enable-Native-Access manifest entry once their launcher supports it. It is in
+      the README rather than left for them to discover from a warning.
+    -->
+    <profile>
+      <id>native-access</id>
+      <activation>
+        <jdk>[24,)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <argLine>--enable-native-access=ALL-UNNAMED</argLine>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!--
+      Everything a Central deployment needs, kept out of the default build so an
+      ordinary `mvn install` needs no GPG key and no credentials.
+
+        mvn -P release -DskipTests verify   signs, and produces the four artifacts
+        mvn -P release deploy               uploads a bundle to the Portal
+
+      autoPublish is false on purpose. The first deployment lands as a validated
+      but UNPUBLISHED bundle that can be inspected in the Portal and dropped.
+      Central releases are permanent and cannot be deleted or overwritten, so the
+      one safeguard worth having is a look at the bundle before it is final.
+
+      The credentials go in ~/.m2/settings.xml under server id `central`, and the
+      GPG key stays outside this repository. Losing that key is the single hardest
+      thing here to recover from: every future release has to be signed with it.
+    -->
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.7</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals><goal>sign</goal></goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.7.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <autoPublish>false</autoPublish>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

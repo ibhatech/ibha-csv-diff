@@ -1,0 +1,137 @@
+# Collect the native libraries into one jar, and deploy it to Maven Central.
+#
+# Phase J4 of docs/PUBLISHING-PLAN.md, and the collect step the native matrix
+# exists to feed. Deliberately **workflow_dispatch only**, not tag driven, until
+# the credentials in "What this needs before it can run" are in place. A deploy
+# workflow that fires on a tag before it can authenticate fails loudly at the worst
+# moment; one that has to be started by hand cannot.
+#
+# It is also safe to run before those secrets exist: leave `deploy` false and it
+# builds the fat jar, verifies both platforms are inside it and uploads it as an
+# artifact, without touching the network. That is the only way to see the artifact
+# a consumer would get without publishing a version number, and Central releases
+# are permanent.
+#
+# ## What this needs before it can run with deploy: true
+#
+#   CENTRAL_TOKEN_USERNAME  }  a Central Portal user token, from
+#   CENTRAL_TOKEN_PASSWORD  }  central.sonatype.com, after the com.ibhatech
+#                              namespace is verified by DNS TXT on ibhatech.com
+#   GPG_PRIVATE_KEY            the ASCII armoured secret key
+#   GPG_PASSPHRASE             its passphrase
+#
+# Losing the GPG key is the single hardest thing here to recover from, because
+# every future release has to be signed with the same one. It belongs in a password
+# manager, not only on a laptop and not only in GitHub.
+
+name: release-java
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Upload to Maven Central. false builds and inspects only."
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Reuses the exact matrix ci runs, rather than a second copy of it that can drift.
+  native:
+    uses: ./.github/workflows/native.yml
+
+  package:
+    needs: native
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          # Only used when deploying; harmless otherwise.
+          server-id: central
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+      - name: Collect every platform's library into java/target/native/
+        uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: java/target/native/
+          # native-linux-x86_64/... becomes linux-x86_64/..., which is the layout
+          # the pom's resource block and NativeLibrary both already expect.
+          merge-multiple: false
+
+      - name: Strip the artifact name prefix and check what arrived
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd java/target/native
+          for d in native-*; do
+            [ -d "$d" ] || continue
+            mv "$d" "${d#native-}"
+          done
+          echo "collected:"
+          ls -R .
+          # The decision of 0.3 is two platforms. If one is missing, the jar would
+          # publish claiming support it does not have, and Central is permanent.
+          for want in linux-x86_64 darwin-aarch64; do
+            test -d "$want" || { echo "ERROR: $want is missing"; exit 1; }
+            test -n "$(ls -A "$want")" || { echo "ERROR: $want is empty"; exit 1; }
+          done
+
+      - name: Build the jar around them
+        working-directory: java
+        # skipNative because the libraries came from the matrix, not from this
+        # runner: building here would overwrite one of them with this host's.
+        run: mvn -B -DskipTests -DskipNative=true package
+
+      - name: The jar must actually contain both platforms
+        shell: bash
+        run: |
+          set -euo pipefail
+          jar=$(ls java/target/ibha-csvdiff-java-*.jar | grep -v -- '-sources\|-javadoc')
+          echo "inspecting $jar"
+          unzip -l "$jar" | grep -E 'native/|META-INF/(LICENSE|NOTICE)'
+          for want in linux-x86_64 darwin-aarch64; do
+            unzip -l "$jar" | grep -q "native/$want/" || {
+              echo "ERROR: $want is not in the jar"; exit 1; }
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jar
+          path: java/target/*.jar
+          if-no-files-found: error
+
+      - name: Deploy to Maven Central
+        if: ${{ inputs.deploy }}
+        working-directory: java
+        env:
+          MAVEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        # autoPublish is false in the release profile, so this uploads a VALIDATED
+        # BUT UNPUBLISHED bundle. It still has to be released by hand in the Portal,
+        # which is the last point at which any of this can be looked at and dropped.
+        run: mvn -B -P release -DskipTests -DskipNative=true deploy
+
+      - name: What to do next
+        if: ${{ inputs.deploy }}
+        run: |
+          echo "Uploaded as a deferred bundle. It is NOT published yet."
+          echo "Open central.sonatype.com and check, before releasing it:"
+          echo "  - native/linux-x86_64/ and native/darwin-aarch64/ are both present"
+          echo "  - the sources and javadoc jars are there, and are not empty"
+          echo "  - every artifact has a valid .asc signature"
+          echo "  - the POM carries url, licenses, developers and scm"
+          echo "Central releases are permanent and cannot be deleted or overwritten."

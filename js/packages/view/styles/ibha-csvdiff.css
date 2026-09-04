@@ -1,0 +1,233 @@
+/* @ibhatech/csvdiff-view default stylesheet, prefix "ibha-csvd-".
+   Generated from src/stylesheet.ts; edit that, not this.
+
+   Styles both the HTML emitter's saved reports and the virtualized view. Every
+   selector qualified by a data- attribute belongs to one of the two; everything
+   else applies to both. */
+
+:root {
+  --ibha-csvd-font-family: system-ui, sans-serif;
+  --ibha-csvd-font-size: 13px;
+  --ibha-csvd-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ibha-csvd-row-height: 28px;
+  --ibha-csvd-cell-padding-x: 8px;
+  --ibha-csvd-border-color: #e2e2e2;
+  --ibha-csvd-header-bg: #fafafa;
+  --ibha-csvd-body-bg: #ffffff;
+  --ibha-csvd-body-fg: #1a1a1a;
+  --ibha-csvd-added-bg: #e8f5e9;
+  --ibha-csvd-added-fg: #1b5e20;
+  --ibha-csvd-deleted-bg: #ffebee;
+  --ibha-csvd-deleted-fg: #b71c1c;
+  --ibha-csvd-modified-bg: #fff8e1;
+  --ibha-csvd-modified-fg: #6d4c00;
+  --ibha-csvd-moved-bg: #eef3fb;
+  --ibha-csvd-finding-bg: #fdeaea;
+  --ibha-csvd-finding-fg: #8c1c1c;
+  --ibha-csvd-suppressed-fg: #7a7a7a;
+  --ibha-csvd-old-value-fg: #8a8a8a;
+  --ibha-csvd-old-value-decoration: line-through;
+  --ibha-csvd-seg-added-bg: #a5d6a7;
+  --ibha-csvd-seg-removed-bg: #ef9a9a;
+  --ibha-csvd-focus-outline: 2px solid #1976d2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ibha-csvd-border-color: #3a3f45;
+    --ibha-csvd-header-bg: #1d2125;
+    --ibha-csvd-body-bg: #15181b;
+    --ibha-csvd-body-fg: #e6e6e6;
+    --ibha-csvd-added-bg: #12301a;
+    --ibha-csvd-added-fg: #8ddc9c;
+    --ibha-csvd-deleted-bg: #3a1618;
+    --ibha-csvd-deleted-fg: #f2a2a2;
+    --ibha-csvd-modified-bg: #33290d;
+    --ibha-csvd-modified-fg: #e8c96a;
+    --ibha-csvd-moved-bg: #1b2533;
+    --ibha-csvd-finding-bg: #3a1618;
+    --ibha-csvd-finding-fg: #f2a2a2;
+    --ibha-csvd-suppressed-fg: #9aa0a6;
+    --ibha-csvd-old-value-fg: #9aa0a6;
+    --ibha-csvd-seg-added-bg: #2c6b3a;
+    --ibha-csvd-seg-removed-bg: #7a2f33;
+    --ibha-csvd-focus-outline: 2px solid #82b1ff;
+  }
+}
+
+.ibha-csvd-report {
+  color: var(--ibha-csvd-body-fg);
+  background: var(--ibha-csvd-body-bg);
+  font-family: var(--ibha-csvd-font-family);
+  font-size: var(--ibha-csvd-font-size);
+}
+
+/* The virtualized view is a single scroll container on both axes, which is what
+   keeps the sticky header from desynchronizing on a fast scroll. A saved report
+   is a document and scrolls with the page, so it is left alone. */
+.ibha-csvd-report[data-virtualized] {
+  position: relative;
+  overflow: auto;
+  max-height: 100%;
+  contain: paint;
+}
+
+.ibha-csvd-table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  width: max-content;
+  min-width: 100%;
+  table-layout: fixed;
+}
+
+.ibha-csvd-th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 0 var(--ibha-csvd-cell-padding-x);
+  height: var(--ibha-csvd-row-height);
+  background: var(--ibha-csvd-header-bg);
+  border-bottom: 1px solid var(--ibha-csvd-border-color);
+}
+
+/* A column the schema declares as part of the key stays put horizontally, so the
+   row is still identifiable when a wide file is scrolled to column 40. The view
+   marks these; the emitter does not, and a saved report has nothing to scroll. */
+.ibha-csvd-th[data-key="true"],
+.ibha-csvd-cell[data-key="true"] {
+  position: sticky;
+  left: var(--ibha-csvd-key-left, 0);
+  z-index: 1;
+  background: inherit;
+}
+.ibha-csvd-th[data-key="true"] { z-index: 3; }
+
+.ibha-csvd-num {
+  width: 6ch;
+  text-align: right;
+  font-family: var(--ibha-csvd-font-mono);
+  color: var(--ibha-csvd-suppressed-fg);
+  padding: 0 var(--ibha-csvd-cell-padding-x);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.ibha-csvd-mark {
+  width: 2ch;
+  text-align: center;
+  font-family: var(--ibha-csvd-font-mono);
+  padding: 0;
+  user-select: none;
+}
+
+.ibha-csvd-row {
+  height: var(--ibha-csvd-row-height);
+  background: var(--ibha-csvd-body-bg);
+}
+
+.ibha-csvd-cell {
+  padding: 0 var(--ibha-csvd-cell-padding-x);
+  border-bottom: 1px solid var(--ibha-csvd-border-color);
+  vertical-align: top;
+  /* The emitter writes a cell's newline through unchanged rather than inventing a
+     <br>. This is where that decision is made visible. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Stated rather than left to the default. A row can be unchanged and still be
+   moved, or carry a finding, and both of those need something to sit on. */
+.ibha-csvd-unchanged { background: var(--ibha-csvd-body-bg); }
+.ibha-csvd-modified { background: var(--ibha-csvd-modified-bg); color: var(--ibha-csvd-modified-fg); }
+.ibha-csvd-added    { background: var(--ibha-csvd-added-bg);    color: var(--ibha-csvd-added-fg); }
+.ibha-csvd-deleted  { background: var(--ibha-csvd-deleted-bg);  color: var(--ibha-csvd-deleted-fg); }
+.ibha-csvd-row.ibha-csvd-moved { box-shadow: inset 3px 0 0 0 var(--ibha-csvd-moved-bg); }
+
+.ibha-csvd-cell.ibha-csvd-changed { font-weight: 600; }
+.ibha-csvd-cell.ibha-csvd-suppressed { color: var(--ibha-csvd-suppressed-fg); font-style: italic; }
+.ibha-csvd-cell.ibha-csvd-finding {
+  background: var(--ibha-csvd-finding-bg);
+  color: var(--ibha-csvd-finding-fg);
+  outline: 1px dashed currentColor;
+  outline-offset: -1px;
+}
+
+.ibha-csvd-old {
+  display: block;
+  color: var(--ibha-csvd-old-value-fg);
+  text-decoration: var(--ibha-csvd-old-value-decoration);
+  font-weight: 400;
+}
+.ibha-csvd-new { display: block; }
+
+.ibha-csvd-del { background: var(--ibha-csvd-seg-removed-bg); text-decoration: inherit; }
+.ibha-csvd-ins { background: var(--ibha-csvd-seg-added-bg); text-decoration: none; }
+
+/* Colour is never the only signal, per spec 8.5. The view renders a real marker
+   cell; an emitter document has no such element, so it gets the same glyph from
+   generated content. The two selectors are mutually exclusive. */
+.ibha-csvd-report:not([data-virtualized]) .ibha-csvd-row.ibha-csvd-modified > .ibha-csvd-num::after { content: " ~"; }
+.ibha-csvd-report:not([data-virtualized]) .ibha-csvd-row.ibha-csvd-added > .ibha-csvd-num::after    { content: " +"; }
+.ibha-csvd-report:not([data-virtualized]) .ibha-csvd-row.ibha-csvd-deleted > .ibha-csvd-num::after  { content: " -"; }
+.ibha-csvd-report:not([data-virtualized]) .ibha-csvd-row.ibha-csvd-moved > .ibha-csvd-num::before   { content: "\21C5 "; }
+
+/* Row presentation modes, spec 8.4. The DOM order of the two value spans is
+   always old then new, matching the emitter, so a copy or a screen reader gets
+   the same reading of both documents; where the old value sits visually is a
+   presentation decision and is made here. */
+.ibha-csvd-report[data-old-value-position="below"] .ibha-csvd-cell.ibha-csvd-changed {
+  display: flex;
+  flex-direction: column-reverse;
+}
+.ibha-csvd-report[data-old-value-position="tooltip"] .ibha-csvd-old {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* stacked: the lower physical row carries the old values and renders unchanged
+   cells blank, so the eye goes straight to what differs. */
+.ibha-csvd-row[data-variant="old"] .ibha-csvd-cell {
+  border-bottom-style: none;
+  color: var(--ibha-csvd-old-value-fg);
+  text-decoration: var(--ibha-csvd-old-value-decoration);
+  font-weight: 400;
+}
+.ibha-csvd-row[data-variant="new"] .ibha-csvd-cell { border-bottom-style: none; }
+
+/* sideBySide: two panes in the one scroll container, so the vertical alignment is
+   the browser's problem rather than a scroll event handler's. */
+.ibha-csvd-report[data-layout="sideBySide"] {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.ibha-csvd-pane { min-width: 0; overflow: visible; }
+.ibha-csvd-pane + .ibha-csvd-pane { border-left: 2px solid var(--ibha-csvd-border-color); }
+.ibha-csvd-row[data-variant="gap"] .ibha-csvd-cell,
+.ibha-csvd-row[data-variant="gap"] .ibha-csvd-num {
+  background: repeating-linear-gradient(
+    135deg, transparent, transparent 6px, var(--ibha-csvd-border-color) 6px, var(--ibha-csvd-border-color) 7px
+  );
+}
+
+/* The spacer rows a virtualized table uses to hold the scrollbar honest. They
+   carry the height of everything not rendered, so the report scrolls as if all
+   90,000 rows were present. */
+.ibha-csvd-spacer { padding: 0; border: 0; }
+
+.ibha-csvd-cell:focus-visible,
+.ibha-csvd-row:focus-visible {
+  outline: var(--ibha-csvd-focus-outline);
+  outline-offset: -2px;
+}
+
+@media print {
+  .ibha-csvd-report[data-virtualized] { overflow: visible; max-height: none; }
+  .ibha-csvd-th { position: static; }
+}

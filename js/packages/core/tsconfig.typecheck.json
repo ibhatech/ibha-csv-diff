@@ -1,0 +1,16 @@
+{
+  "$comment": "Typechecks the tests too, which tsconfig.json excludes so that the build does not emit them.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "dist"
+  ]
+}
